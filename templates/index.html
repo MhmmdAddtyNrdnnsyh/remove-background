@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Remove Background</title>
+    <link href="{{ url_for('static', filename='css/output.css') }}" rel="stylesheet" />
+    <style>
+      @keyframes fadeout {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+    </style>
+  </head>
+  <body class="flex justify-center items-center bg-gray-900 text-white">
+    <div class="p-10">
+      <h1 class="text-4xl font-black text-orange-500">
+        Remove Background By Cuppy
+      </h1>
+      <div class="mt-6">
+        <form id="upload-form">
+          <label for="image">Pilih Gambar Disini</label>
+          <input
+            class="bg-white text-black mr-5 rounded-sm p-1"
+            type="file"
+            name="image"
+            id="file-input"
+            accept="image/*"
+            required
+          />
+          <div class="mt-6 flex">
+            <button type="submit" class="rounded-sm h-8 w-32 bg-indigo-500">
+              Proses
+            </button>
+            <button
+              style="display: none"
+              id="loading"
+              type="button"
+              class="bg-indigo-500 h-8 w-32 rounded-sm absolute"
+              disabled
+            >
+              Processing...
+            </button>
+          </div>
+        </form>
+      </div>
+      <div id="result"></div>
+    </div>
+    <script>
+      const form = document.getElementById("upload-form");
+      const fileInput = document.getElementById("file-input");
+      const resultDiv = document.getElementById("result");
+      const loadingDiv = document.getElementById("loading");
+      const submitButton = form.querySelector('button[type="submit"]');
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        if (!fileInput.files.length) {
+          alert("Pilih gambar terlebih dahulu!");
+          return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append("image", file);
+
+        // Nonaktifkan tombol dan ubah teksnya
+        submitButton.disabled = true;
+        submitButton.textContent = "Processing...";
+        resultDiv.innerHTML = "";
+
+        try {
+          const response = await fetch("/api/remove-bg", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            // Dapatkan pesan error dari JSON jika ada
+            const errorData = await response.json();
+            throw new Error(errorData.error || "Gagal memproses gambar");
+          }
+
+          const blob = await response.blob();
+          const imgURL = URL.createObjectURL(blob);
+
+          // Tampilkan gambar dan tombol download
+          resultDiv.innerHTML = `
+            <h3 class="text-xl font-bold mt-4">Hasil Gambar:</h3>
+            <img src="${imgURL}" alt="Gambar tanpa background" class="mt-2 border rounded-xl" />
+            <a href="${imgURL}" download="hasil-tanpa-bg.png" class="inline-block mt-4 px-4 py-2 bg-green-500 rounded-sm hover:bg-green-600">
+                Download Gambar
+            </a>`;
+        } catch (error) {
+          // Tampilkan pesan error dengan lebih baik
+          resultDiv.innerHTML = `<p class="text-red-500 mt-4">Error: ${error.message}</p>`;
+        } finally {
+          // Kembalikan tombol ke keadaan semula
+          submitButton.disabled = false;
+          submitButton.textContent = "Proses";
+
+          // Kosongkan input file
+          form.reset();
+        }
+      });
+    </script>
+  </body>
+</html>
